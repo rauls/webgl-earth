@@ -17,19 +17,20 @@ THREE.TrackballControls = function ( object, domElement ) {
 	this.screen = { width: 0, height: 0, offsetLeft: 0, offsetTop: 0 };
 	this.radius = ( this.screen.width + this.screen.height ) / 4;
 
-	this.rotateSpeed = 1.0;
-	this.zoomSpeed = 1.2;
-	this.panSpeed = 0.3;
+	this.rotateSpeed = 1/20;
+	this.zoomSpeed = 1.0;
+	this.panSpeed = 0.13;
 
 	this.noRotate = false;
 	this.noZoom = false;
 	this.noPan = false;
 
 	this.staticMoving = false;
-	this.dynamicDampingFactor = 0.2;
+	this.dynamicDampingFactor = 0.12;
+	this.dynamicZoomFactor    = 1.00;
 
-	this.minDistance = 0;
-	this.maxDistance = Infinity;
+	this.minDistance = 0.5001;
+	this.maxDistance = 200;
 
 	this.keys = [ 65 /*A*/, 83 /*S*/, 68 /*D*/ ];
 
@@ -68,6 +69,10 @@ THREE.TrackballControls = function ( object, domElement ) {
 
 
 	// methods
+	this.getAltitude = function () {
+		return 	_this.altitude = (_this.object.position.distanceTo( new THREE.Vector3(0,0,0) ) - 0.5);
+
+	}
 
 	this.handleResize = function () {
 
@@ -132,14 +137,18 @@ THREE.TrackballControls = function ( object, domElement ) {
 
 	this.rotateCamera = function () {
 
-		var angle = Math.acos( _rotateStart.dot( _rotateEnd ) / _rotateStart.length() / _rotateEnd.length() );
+		var iangle = Math.acos( _rotateStart.dot( _rotateEnd ) / _rotateStart.length() / _rotateEnd.length() );
 
-		if ( angle ) {
+		if ( iangle ) {
 
 			var axis = ( new THREE.Vector3() ).crossVectors( _rotateStart, _rotateEnd ).normalize();
-				quaternion = new THREE.Quaternion();
+			quaternion = new THREE.Quaternion();
 
-			angle *= _this.rotateSpeed;
+			_this.dynamicZoomFactor = _this.getAltitude() / 1.5;
+
+			var angle = iangle * (_this.rotateSpeed) * (_this.dynamicZoomFactor);
+
+			//console.log("this.rotateCamera , factor,angle = ", '1/'+Math.round(1/_this.dynamicZoomFactor), angle*180/Math.PI+"'" )
 
 			quaternion.setFromAxisAngle( axis, -angle );
 
@@ -149,18 +158,13 @@ THREE.TrackballControls = function ( object, domElement ) {
 			_rotateEnd.applyQuaternion( quaternion );
 
 			if ( _this.staticMoving ) {
-
 				_rotateStart.copy( _rotateEnd );
 
 			} else {
-
 				quaternion.setFromAxisAngle( axis, angle * ( _this.dynamicDampingFactor - 1.0 ) );
 				_rotateStart.applyQuaternion( quaternion );
-
 			}
-
 		}
-
 	};
 
 	this.zoomCamera = function () {
@@ -173,20 +177,22 @@ THREE.TrackballControls = function ( object, domElement ) {
 
 		} else {
 
-			var factor = 1.0 + ( _zoomEnd.y - _zoomStart.y ) * _this.zoomSpeed;
+			_this.dynamicZoomFactor = _this.getAltitude() / 1.5;
 
-			if ( factor !== 1.0 && factor > 0.0 ) {
+			var factor = 1.0 + ( _zoomEnd.y - _zoomStart.y ) * (_this.zoomSpeed * _this.dynamicZoomFactor);
+
+			if ( factor !== 1.0 && factor > 0.0  ) {
 
 				_eye.multiplyScalar( factor );
 
 				if ( _this.staticMoving ) {
-
 					_zoomStart.copy( _zoomEnd );
 
 				} else {
+					var delta = ( _zoomEnd.y - _zoomStart.y );
+					_zoomStart.y += delta * this.dynamicDampingFactor;
 
-					_zoomStart.y += ( _zoomEnd.y - _zoomStart.y ) * this.dynamicDampingFactor;
-
+					//console.log("this.zoomCamera , delta,factor,altitude = ", delta, '1/'+Math.round(1/_this.dynamicZoomFactor), _this.altitude )
 				}
 
 			}
@@ -200,27 +206,23 @@ THREE.TrackballControls = function ( object, domElement ) {
 		var mouseChange = _panEnd.clone().sub( _panStart );
 
 		if ( mouseChange.lengthSq() ) {
+			var factor =  0.2 * this.dynamicZoomFactor;
 
-			mouseChange.multiplyScalar( _eye.length() * _this.panSpeed );
+			mouseChange.multiplyScalar( _eye.length() * _this.panSpeed * factor);
 
-			var pan = _eye.clone().cross( _this.object.up ).setLength( mouseChange.x );
-			pan.add( _this.object.up.clone().setLength( mouseChange.y ) );
+			var pan = _eye.clone().cross( _this.object.up ).setLength( mouseChange.x* factor  );
+			pan.add( _this.object.up.clone().setLength( mouseChange.y * factor ) );
 
 			_this.object.position.add( pan );
 			_this.target.add( pan );
 
+
 			if ( _this.staticMoving ) {
-
 				_panStart = _panEnd;
-
 			} else {
-
-				_panStart.add( mouseChange.subVectors( _panEnd, _panStart ).multiplyScalar( _this.dynamicDampingFactor ) );
-
+				_panStart.add( mouseChange.subVectors( _panEnd, _panStart ).multiplyScalar( _this.dynamicDampingFactor * factor ) );
 			}
-
 		}
-
 	};
 
 	this.checkDistances = function () {
@@ -428,7 +430,7 @@ THREE.TrackballControls = function ( object, domElement ) {
 
 		}
 
-		_zoomStart.y += delta * 0.01;
+		_zoomStart.y += delta * 0.004;
 
 	}
 
