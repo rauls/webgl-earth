@@ -22,6 +22,56 @@ var m_radius    = 6371.0;
 var lat_adj = 0;
 var lat_off = 180;
 var plane_height = 5100;
+var current_edit = 1;
+var edit_speed = 1000;
+
+
+
+function item2params(item,params) {
+	var item = overlays[ current_edit ];
+	params.longitude = item.long;
+	params.latitude = item.lat;
+	params.rotation = item.rotation;
+	params.scale = item.scale;
+	params.opacity = item.opacity;
+}
+
+var GuiParams = function() {
+	this.current_edit = window.current_edit;
+	this.rotate_speed = window.rotate_speed;
+	item2params( overlays[ current_edit ], this );
+	this.South_Pole = function() {
+		camera.position.copy( new THREE.Vector3( -0.0007532996302339945,-0.5029778573090454,-0.00047011971273784 ) );
+	};
+}
+
+function init_datgui()
+{
+	var gui = new dat.gui.GUI();
+	var params = new GuiParams();
+	gui.remember(params);
+
+	gui.add(params, 'rotate_speed', 0, 10).onChange( function(v) {
+		window.rotate_speed = parseFloat(v);
+	} ).onFinishChange( function() { console.log("DONE") });
+	gui.add(params, 'current_edit', 0, overlays.length ).onChange( function(v) {
+		current_edit = parseInt(v);
+		item2params( overlays[ current_edit ], params );
+	} );
+	gui.add(params, 'longitude', 0, 360 ).step(0.02).onChange( function(v) {
+		overlays[ current_edit ].long = parseFloat(v);
+	} ).listen();
+	gui.add(params, 'latitude', 0, 360 ).step(0.02).onChange( function(v) {
+		overlays[ current_edit ].lat = parseFloat(v);
+	} ).listen();
+	gui.add(params, 'rotation', 0, 360 ).step(1).onChange( function(v) {
+		overlays[ current_edit ].rotation = parseFloat(v);
+	} ).listen();
+	gui.add(params, 'scale', 0, 32 ).step(0.2).onChange( function(v) {
+		overlays[ current_edit ].scale = parseFloat(v);
+	} ).listen();
+	gui.add(params, 'South_Pole');
+}
 
 
 (function () {
@@ -131,10 +181,11 @@ var plane_height = 5100;
 	window.overlays = [ {
 			image: 		"sp-icecore_01b.jpg",
 			lat:   		-89.979,
+			opacity:    1.0,
 			long:  		0.0,
 			rotation: 	0,
 			scale: 		15,
-			opacity:    1.0,
+			altitude:   0,
 			width:  	1800,
 			height: 	1350
 		}, {
@@ -144,6 +195,7 @@ var plane_height = 5100;
 			rotation: 	230,
 			opacity:    0.7,
 			scale: 		1.0,
+			altitude:   0,
 			width:  	2048,
 			height: 	1380
 		}, {
@@ -153,6 +205,7 @@ var plane_height = 5100;
 			rotation: 	0,
 			opacity:    0.7,
 			scale: 		1,
+			altitude:   0,
 			width:  	1369,
 			height: 	1073
 		}
@@ -160,14 +213,18 @@ var plane_height = 5100;
 
 	window.planes = create_overlays(scene,overlays);
 
+	window.addEventListener( 'keydown', key_handler, false );
+
+	init_datgui();
+
 	render();
-	
+
+	window.app = this;	
 	return this;
 
 }());
 
 
-var current_edit = 0;
 
 /*
 escape 	27
@@ -179,27 +236,34 @@ left arrow 	37
 up arrow 	38
 right arrow 	39
 down arrow 	40 
+
+numpad 8 	104
+numpad 9 	105
+multiply 	106
+add 	107
+subtract 	109
+decimal point 	110
+divide 	111 
 */
 function key_handler(event) {
-    var overlay = window.overlays[ current_edit ];
-    if( event.keyCode == 37 ) {
-        overlay.long -= 100/(m_radius*1000); 
+    var overlay = window.overlays[ window.current_edit ];
+    var spd = window.edit_speed;
+    if( event.keyCode == 37 ) {     overlay.long -= spd/(m_radius*1);     }
+    if( event.keyCode == 38 ) {     overlay.lat  += spd/(m_radius*1000);     }
+    if( event.keyCode == 39 ) {     overlay.long += spd/(m_radius*1);     }
+    if( event.keyCode == 40 ) {     overlay.lat  -= spd/(m_radius*1000);     }
+    if( event.keyCode == 33 ) {     overlay.scale  += spd/(m_radius*1000);     }
+    if( event.keyCode == 34 ) {     overlay.scale  -= spd/(m_radius*1000);     }
+    if( event.key == ',' ) {        overlay.rotation-=1;     }
+    if( event.key == '.' ) {        overlay.rotation+=1;     }
+
+    if( event.keyCode == 9 ) {
+    	window.current_edit++;
+    	if( window.current_edit == overlays.length ) {
+    		window.current_edit = 0;
+    	}
     }
-    if( event.keyCode == 38 ) {
-        overlay.lat  += 100/(m_radius*1000); 
-    }
-    if( event.keyCode == 39 ) {
-        overlay.long += 100/(m_radius*1000); 
-    }
-    if( event.keyCode == 40 ) {
-        overlay.lat  -= 100/(m_radius*1000); 
-    }
-    if( event.key == ',' ) {
-        overlay.rotation-=1; 
-    }
-    if( event.key == '.' ) {
-        overlay.rotation+=1; 
-    }
+    console.log("overlay : ", overlay )
 }
 
 
@@ -218,6 +282,24 @@ function create_grid(color) {
 }
 // 1deg = 111.11 km.
 // 0.001 = 111meters
+
+function createBorder(width,height) {
+	var w = width/(m_radius*1000.0);
+	var h = height/(m_radius*1000.0);
+	var geometry = new THREE.Geometry()	
+	var x = -w/2,  y = -h/2;
+	geometry.vertices.push( new THREE.Vector3(x, y, 0) );	x+=w;
+	geometry.vertices.push( new THREE.Vector3(x, y, 0) );	y+=h;
+	geometry.vertices.push( new THREE.Vector3(x, y, 0) );	x-=w;
+	geometry.vertices.push( new THREE.Vector3(x, y, 0) );	y-=h;
+	geometry.vertices.push( new THREE.Vector3(x, y, 0) );
+
+	var material = new THREE.LineBasicMaterial( { color: 0x00ff00, linewidth: 3 } );
+
+	var line = new THREE.Line(geometry, material);
+
+	return line;
+}
 
 function createPlane(image_path,long,lat,rotation,width,height,opacity) {
 	var w = width/(m_radius*1000.0);
@@ -243,12 +325,16 @@ function create_overlays( scene, items ) {
 		overlay.scale.y =
 		overlay.scale.x = item.scale;
 		overlay_pos( overlay, 0, item.lat, item.rotation, i );
+		overlay.border = createBorder( item.width, item.height );
+		overlay.border.visible = (i==current_edit);
+		overlay_pos( overlay.border, 0, item.lat, item.rotation, i );
 
 		console.log("overlay pos ", overlay.position,overlay.rotation )
 
 		var plane = new THREE.Object3D();
 		plane.name = 'Overlay-'+item.image;
 		plane.add( overlay );
+		plane.add( overlay.border );
 		//plane.position = new THREE.Vector3( 0,0,0 );
 		overlay_rotate( plane, item.long, 0, item.rotation )
 
@@ -292,6 +378,8 @@ function overlays_spin( a ) {
     var item = window.overlays[0];
 	window.overlays.forEach( function(item,i) {
 		overlay_pos( item.overlay, 0, item.lat, item.rotation, i );
+		overlay_pos( item.overlay.border, 0, item.lat, item.rotation, i );
+
 	    overlay_rotate( item.object, item.long, 0 );
 	    item.overlay.rotation.z = deg(item.rotation);
 	})
