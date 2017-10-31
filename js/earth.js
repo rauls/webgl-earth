@@ -34,6 +34,7 @@ function item2params(item,params) {
 	params.rotation = item.rotation;
 	params.scale = item.scale;
 	params.opacity = item.opacity;
+	params.name = item.image;
 }
 
 var GuiParams = function() {
@@ -51,6 +52,7 @@ function init_datgui()
 	var params = new GuiParams();
 	gui.remember(params);
 
+	gui.add(params, 'name');
 	gui.add(params, 'rotate_speed', 0, 10).onChange( function(v) {
 		window.rotate_speed = parseFloat(v);
 	} ).onFinishChange( function() { console.log("DONE") });
@@ -119,7 +121,7 @@ function init_datgui()
 	scene.add(window.stars);
 
 	//var controls = new THREE.OrbitControls(camera);
-	var controls = new THREE.TrackballControls(camera);
+	this.controls = new THREE.TrackballControls(camera);
 
 	webglEl.appendChild(renderer.domElement);
 	
@@ -127,7 +129,7 @@ function init_datgui()
 	window.rotate_speed = 0.10;
 
 	function render() {
-		controls.update();
+		this.controls.update();
 		window.angle += rotate_speed;
 		if( window.angle > 360 ) {
 		    window.angle -= 360;
@@ -184,7 +186,7 @@ function init_datgui()
 			opacity:    1.0,
 			long:  		0.0,
 			rotation: 	0,
-			scale: 		15,
+			scale: 		15.0,
 			altitude:   0,
 			width:  	1800,
 			height: 	1350
@@ -204,7 +206,7 @@ function init_datgui()
 			long:  		0.0,
 			rotation: 	0,
 			opacity:    0.7,
-			scale: 		1,
+			scale: 		1.0,
 			altitude:   0,
 			width:  	1369,
 			height: 	1073
@@ -252,8 +254,8 @@ function key_handler(event) {
     if( event.keyCode == 38 ) {     overlay.lat  += spd/(m_radius*1000);     }
     if( event.keyCode == 39 ) {     overlay.long += spd/(m_radius*1);     }
     if( event.keyCode == 40 ) {     overlay.lat  -= spd/(m_radius*1000);     }
-    if( event.keyCode == 33 ) {     overlay.scale  += spd/(m_radius*1000);     }
-    if( event.keyCode == 34 ) {     overlay.scale  -= spd/(m_radius*1000);     }
+    if( event.keyCode == 33 ) {     overlay.scale  += spd/(m_radius*10);     }
+    if( event.keyCode == 34 ) {     overlay.scale  -= spd/(m_radius*10);     }
     if( event.key == ',' ) {        overlay.rotation-=1;     }
     if( event.key == '.' ) {        overlay.rotation+=1;     }
 
@@ -283,7 +285,7 @@ function create_grid(color) {
 // 1deg = 111.11 km.
 // 0.001 = 111meters
 
-function createBorder(width,height) {
+function createBorder(width,height,scale) {
 	var w = width/(m_radius*1000.0);
 	var h = height/(m_radius*1000.0);
 	var geometry = new THREE.Geometry()	
@@ -297,11 +299,13 @@ function createBorder(width,height) {
 	var material = new THREE.LineBasicMaterial( { color: 0x00ff00, linewidth: 3 } );
 
 	var line = new THREE.Line(geometry, material);
+	line.scale.y =
+	line.scale.x = scale;
 
 	return line;
 }
 
-function createPlane(image_path,long,lat,rotation,width,height,opacity) {
+function createPlane(image_path,long,lat,rotation,width,height,opacity,scale) {
 	var w = width/(m_radius*1000.0);
 	var h = height/(m_radius*1000.0);
     var m = new THREE.Mesh(
@@ -313,6 +317,8 @@ function createPlane(image_path,long,lat,rotation,width,height,opacity) {
             opacity: opacity || 1.0
         })
     );
+	m.scale.y =
+	m.scale.x = scale;
     return m;
 }
 
@@ -320,14 +326,12 @@ function create_overlays( scene, items ) {
 	var planes = [];
 	var item = items[0];
 	items.forEach( function(item,i) {
-		var overlay = createPlane('sp/'+item.image, item.long, item.lat, item.rotation, item.width, item.height, item.opacity) 
+		var overlay = createPlane('sp/'+item.image, item.long, item.lat, item.rotation, item.width, item.height, item.opacity, item.scale )
 		overlay.name = 'Image-'+item.image;
-		overlay.scale.y =
-		overlay.scale.x = item.scale;
-		overlay_pos( overlay, 0, item.lat, item.rotation, i );
-		overlay.border = createBorder( item.width, item.height );
+		overlay_pos( overlay, 0, item.lat, item.rotation, item.scale, i );
+		overlay.border = createBorder( item.width, item.height, item.scale );
 		overlay.border.visible = (i==current_edit);
-		overlay_pos( overlay.border, 0, item.lat, item.rotation, i );
+		overlay_pos( overlay.border, 0, item.lat, item.rotation, item.scale, i );
 
 		console.log("overlay pos ", overlay.position,overlay.rotation )
 
@@ -350,7 +354,7 @@ function create_overlays( scene, items ) {
 
 function deg(n) { return n * Math.PI / 180.0; }
 
-function overlay_pos( m, long, lat, rot, altitude )
+function overlay_pos( m, long, lat, rot, scale, altitude )
 {
     if( m ) {
         var newpos = lonLatToVector3( deg(long), deg(lat), (typeof(altitude) == 'number') ? plane_height+(altitude*5) : plane_height );
@@ -359,7 +363,9 @@ function overlay_pos( m, long, lat, rot, altitude )
         m.rotation.x = deg(lat_off-lat)-(lat*lat_adj);
         m.rotation.y = deg(180);
         m.rotation.z = deg(rot);
-        return m.rotation;
+		m.scale.y =
+		m.scale.x = scale;
+        return m;
     }
 }
 
@@ -377,8 +383,9 @@ function overlay_rotate( m, long, lat )
 function overlays_spin( a ) {
     var item = window.overlays[0];
 	window.overlays.forEach( function(item,i) {
-		overlay_pos( item.overlay, 0, item.lat, item.rotation, i );
-		overlay_pos( item.overlay.border, 0, item.lat, item.rotation, i );
+		overlay_pos( item.overlay, 0, item.lat, item.rotation, item.scale, i );
+		overlay_pos( item.overlay.border, 0, item.lat, item.rotation, item.scale, i );
+		item.overlay.border.visible = (i==current_edit);
 
 	    overlay_rotate( item.object, item.long, 0 );
 	    item.overlay.rotation.z = deg(item.rotation);
