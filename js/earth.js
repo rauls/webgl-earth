@@ -28,7 +28,6 @@ var edit_speed = 1000;
 
 
 function item2params(item,params) {
-	var item = overlays[ current_edit ];
 	params.longitude = item.long;
 	params.latitude = item.lat;
 	params.rotation = item.rotation;
@@ -42,17 +41,34 @@ var GuiParams = function() {
 	this.rotate_speed = window.rotate_speed;
 	item2params( overlays[ current_edit ], this );
 	this.South_Pole = function() {
-		camera.position.copy( new THREE.Vector3( -0.0007532996302339945,-0.5029778573090454,-0.00047011971273784 ) );
+		//
+		app.controls.set_position( new THREE.Vector3( -0.0007532996302339945,-0.5029778573090454,-0.00047011971273784 ) );
 	};
+	this.Add_Image_Tile = function() {
+		var newitem = Object.assign( {}, overlays[ current_edit ] );
+		newitem.image = this.new_url || "";
+		overlays.push( newitem );
+		planes.push( create_overlay( newitem,overlays.length ) );
+	};
+	this.new_url = "";
+	this.altitude = 10000;
 }
 
 function init_datgui()
 {
-	var gui = new dat.gui.GUI();
+	var gui = new dat.gui.GUI({ load: JSON });
 	var params = new GuiParams();
 	gui.remember(params);
 
-	gui.add(params, 'name');
+	var names_list = [];
+	overlays.forEach( function(item) {
+		names_list.push( item.image );
+	})
+	params.names_list = names_list;
+
+	gui.add(params, 'name').listen();
+	gui.add(params, 'names_list', names_list ).listen();
+
 	gui.add(params, 'rotate_speed', 0, 10).onChange( function(v) {
 		window.rotate_speed = parseFloat(v);
 	} ).onFinishChange( function() { console.log("DONE") });
@@ -60,31 +76,46 @@ function init_datgui()
 		current_edit = parseInt(v);
 		item2params( overlays[ current_edit ], params );
 	} );
-	gui.add(params, 'longitude', 0, 360 ).step(0.02).onChange( function(v) {
+	gui.add(params, 'longitude', 0, 360 ).step(0.0201).onChange( function(v) {
 		overlays[ current_edit ].long = parseFloat(v);
 	} ).listen();
-	gui.add(params, 'latitude', 0, 360 ).step(0.02).onChange( function(v) {
+	gui.add(params, 'latitude', 0, 360 ).step(0.0201).onChange( function(v) {
 		overlays[ current_edit ].lat = parseFloat(v);
 	} ).listen();
 	gui.add(params, 'rotation', 0, 360 ).step(1).onChange( function(v) {
 		overlays[ current_edit ].rotation = parseFloat(v);
 	} ).listen();
-	gui.add(params, 'scale', 0, 32 ).step(0.2).onChange( function(v) {
+	gui.add(params, 'scale', 0, 32 ).step(0.02).onChange( function(v) {
 		overlays[ current_edit ].scale = parseFloat(v);
 	} ).listen();
+	gui.add(params, 'opacity', 0, 1 ).step(0.05).onChange( function(v) {
+		overlays[ current_edit ].opacity = parseFloat(v);
+	} ).listen();
+
 	gui.add(params, 'South_Pole');
+	gui.add(params, 'Add_Image_Tile');
+	var f2 = gui.addFolder('    New Image Location');
+	f2.add( params, 'new_url' );
+
+	return params;
 }
 
 
 (function () {
-
-	var webglEl = document.getElementById('webgl');
-
-	if (!Detector.webgl) {
-		Detector.addGetWebGLMessage(webglEl);
-		return;
-	}
-
+	window.app = this;
+	this.assets = {
+		local: {
+			base:   'images/',
+		},
+		online: {
+			base: 	'http://users.on.net/~rsobon/earth/images/'
+		},
+		earth:  '2_no_clouds_4k.png',
+		elev:   'elev_bump_4k.jpg',
+		water:  'water_4k.png',
+		clouds: 'fair_clouds_4k.png',
+		current: this.local
+	};
 	var width  = window.innerWidth,
 		height = window.innerHeight;
 
@@ -93,8 +124,21 @@ function init_datgui()
 		segments = 36*2,
 		rotation = 0;
 
-	var scene = new THREE.Scene();
+	if( window.location.href.match( /192.168.|^file:/ ) ) {
+		assets.current = assets.local;
+	} else {
+		assets.current = assets.online;
+		assets.current = assets.local;
+	}
 
+	var webglEl = document.getElementById('webgl');
+
+	if (!Detector.webgl) {
+		Detector.addGetWebGLMessage(webglEl);
+		return;
+	}
+
+	var scene = new THREE.Scene();
 	var camera = window.camera = new THREE.PerspectiveCamera(45, width / height, 0.0001, 91*13);
 	camera.position.z = 2 * radius;
 
@@ -103,9 +147,16 @@ function init_datgui()
 
 	scene.add(new THREE.AmbientLight(0x333333));
 
-	var light = new THREE.DirectionalLight(0xfffef9, .6);
+	this.Texture = Texture;
+	this.light = new THREE.DirectionalLight(0xfffef9, .6);
 	light.position.set(5,-13,135);
 	scene.add(light);
+	
+	this.light_pos = 0;
+	light.timer = setInterval( function() {
+	    light_pos += 0.1;
+	    light.position.set( Math.sin( deg(light_pos) ) * 100, 2,  Math.cos( deg(light_pos) ) * 100 );
+	}, 1000 );
 
 	var earth = window.earth = new THREE.Object3D();
     var sphere = createSphere(radius, segments);
@@ -140,16 +191,29 @@ function init_datgui()
 		renderer.render(scene, camera);
 	}
 
+
+	function Texture( name, is_url ) {
+		var assets = window.app.assets;
+		var loader = new THREE.TextureLoader();
+		loader.setCrossOrigin("*");
+		if( name.match(/^images/) || name.match(/^http/i) || typeof(is_url) != 'undefined' )  {
+			return loader.load( name );
+		} else {
+			var src = assets.current.base + assets[ name ];
+			return loader.load( src );
+		}
+	}
+
 	function createSphere(radius, segments) {
 		return new THREE.Mesh(
 			new THREE.SphereGeometry(radius, segments, segments),
 			new THREE.MeshPhongMaterial({
-				map:         Texture('images/2_no_clouds_4k.png'),
-				bumpMap:     Texture('images/elev_bump_4k.jpg'),
+				map:         Texture('earth'),
+				bumpMap:     Texture('elev'),
 				bumpScale:   0.001,
 				transparent: true,
-				opacity:     0.9,
-				specularMap: Texture('images/water_4k.png'),
+				opacity:     1.0,
+				specularMap: Texture('water'),
 				specular:    new THREE.Color('grey')								
 			})
 		);
@@ -160,7 +224,7 @@ function init_datgui()
 		return new THREE.Mesh(
 			new THREE.SphereGeometry(radius + ch, segments, segments),			
 			new THREE.MeshPhongMaterial({
-				map:         Texture('images/fair_clouds_4k.png'),
+				map:         Texture('clouds'),
 				transparent: true
 			})
 		);		
@@ -191,22 +255,24 @@ function init_datgui()
 			width:  	1800,
 			height: 	1350
 		}, {
+		// Object { image: "pole-from-air.jpg", lat: -89.94928582639992, long: 268.54229354889435, rotation: 141, opacity: 0.7, scale: 1, altitude: 0, width: 2048, height: 1380, object: {…}, … }
 			image: 		"pole-from-air.jpg",
-			lat:   		-89.988,
-			long:  		0.0,
-			rotation: 	230,
+			lat:   		-89.94928582639992,
+			long:  		268.54229354889435,
+			rotation: 	141,
 			opacity:    0.7,
 			scale: 		1.0,
 			altitude:   0,
 			width:  	2048,
 			height: 	1380
 		}, {
+		//overlay :  Object { image: "abovedomes1.jpg", lat: -89.9504407471364, long: -30.92136242348144, rotation: 36, opacity: 0.2, scale: 0.9372155077695807, altitude: 0, width: 1369, height: 1073, object: {…}, … }
 			image: 		"abovedomes1.jpg",
-			lat:   		-89.998,
-			long:  		0.0,
-			rotation: 	0,
+			lat:   		-89.9504407471364,
+			long:  		-30.92136242348144,
+			rotation: 	36,
 			opacity:    0.7,
-			scale: 		1.0,
+			scale: 		0.9372,
 			altitude:   0,
 			width:  	1369,
 			height: 	1073
@@ -217,16 +283,13 @@ function init_datgui()
 
 	window.addEventListener( 'keydown', key_handler, false );
 
-	init_datgui();
+	this.gui_params = init_datgui();
 
 	render();
 
-	window.app = this;	
 	return this;
 
 }());
-
-
 
 /*
 escape 	27
@@ -250,29 +313,32 @@ divide 	111
 function key_handler(event) {
     var overlay = window.overlays[ window.current_edit ];
     var spd = window.edit_speed;
-    if( event.keyCode == 37 ) {     overlay.long -= spd/(m_radius*1);     }
-    if( event.keyCode == 38 ) {     overlay.lat  += spd/(m_radius*1000);     }
-    if( event.keyCode == 39 ) {     overlay.long += spd/(m_radius*1);     }
-    if( event.keyCode == 40 ) {     overlay.lat  -= spd/(m_radius*1000);     }
-    if( event.keyCode == 33 ) {     overlay.scale  += spd/(m_radius*10);     }
-    if( event.keyCode == 34 ) {     overlay.scale  -= spd/(m_radius*10);     }
-    if( event.key == ',' ) {        overlay.rotation-=1;     }
-    if( event.key == '.' ) {        overlay.rotation+=1;     }
+    var update = false;
+    if( event.keyCode == 37 ) {     overlay.long -= spd/(m_radius*1); update=true;    }
+    if( event.keyCode == 38 ) {     overlay.lat  += spd/(m_radius*1000); update=true;    }
+    if( event.keyCode == 39 ) {     overlay.long += spd/(m_radius*1); update=true;    }
+    if( event.keyCode == 40 ) {     overlay.lat  -= spd/(m_radius*1000); update=true;    }
+    if( event.keyCode == 33 ) {     overlay.scale  += spd/(m_radius*10); update=true;    }
+    if( event.keyCode == 34 ) {     overlay.scale  -= spd/(m_radius*10); update=true;    }
+    if( event.key == ',' ) {        overlay.rotation-=1; update=true;    }
+    if( event.key == '.' ) {        overlay.rotation+=1; update=true;    }
 
     if( event.keyCode == 9 ) {
     	window.current_edit++;
     	if( window.current_edit == overlays.length ) {
     		window.current_edit = 0;
     	}
+    	app.gui_params.current_edit = current_edit;
+    	update=true;
+    }
+    if( update ) {
+    	item2params( overlay, app.gui_params );
     }
     console.log("overlay : ", overlay )
 }
 
 
 
-function Texture( filename ) {
-	return new THREE.TextureLoader().load( filename );
-}
 
 
 function create_grid(color) {
@@ -311,7 +377,7 @@ function createPlane(image_path,long,lat,rotation,width,height,opacity,scale) {
     var m = new THREE.Mesh(
         new THREE.PlaneGeometry( w, h, 1 ),
         new THREE.MeshBasicMaterial({
-            map:   Texture(image_path),
+            map:   Texture(image_path,true),
 			side:  THREE.DoubleSide,
             transparent: opacity ? true : false,
             opacity: opacity || 1.0
@@ -322,30 +388,34 @@ function createPlane(image_path,long,lat,rotation,width,height,opacity,scale) {
     return m;
 }
 
+function create_overlay( item,i ) {
+	var overlay = createPlane('sp/'+item.image, item.long, item.lat, item.rotation, item.width, item.height, item.opacity, item.scale )
+	overlay.name = 'Image-'+item.image;
+	overlay_pos( overlay, 0, item.lat, item.rotation, item.scale, i );
+	overlay.border = createBorder( item.width, item.height, item.scale );
+	overlay.border.visible = (i==current_edit);
+	overlay_pos( overlay.border, 0, item.lat, item.rotation, item.scale, i );
+
+	console.log("overlay pos ", overlay.position,overlay.rotation )
+
+	var plane = new THREE.Object3D();
+	plane.name = 'Overlay-'+item.image;
+	plane.add( overlay );
+	plane.add( overlay.border );
+	//plane.position = new THREE.Vector3( 0,0,0 );
+	overlay_rotate( plane, item.long, 0, item.rotation )
+
+	item.object = plane;
+	item.overlay = overlay;
+	earth.add( plane );
+	return plane;
+}
+
 function create_overlays( scene, items ) {
 	var planes = [];
 	var item = items[0];
 	items.forEach( function(item,i) {
-		var overlay = createPlane('sp/'+item.image, item.long, item.lat, item.rotation, item.width, item.height, item.opacity, item.scale )
-		overlay.name = 'Image-'+item.image;
-		overlay_pos( overlay, 0, item.lat, item.rotation, item.scale, i );
-		overlay.border = createBorder( item.width, item.height, item.scale );
-		overlay.border.visible = (i==current_edit);
-		overlay_pos( overlay.border, 0, item.lat, item.rotation, item.scale, i );
-
-		console.log("overlay pos ", overlay.position,overlay.rotation )
-
-		var plane = new THREE.Object3D();
-		plane.name = 'Overlay-'+item.image;
-		plane.add( overlay );
-		plane.add( overlay.border );
-		//plane.position = new THREE.Vector3( 0,0,0 );
-		overlay_rotate( plane, item.long, 0, item.rotation )
-
-		item.object = plane;
-		item.overlay = overlay;
-		planes.push( plane );
-		earth.add( plane );
+		planes.push( create_overlay( item,i ) );
 	})
 
 	return planes;

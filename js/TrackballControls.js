@@ -45,8 +45,8 @@ THREE.TrackballControls = function ( object, domElement ) {
 
 	_eye = new THREE.Vector3(),
 
-	_rotateStart = new THREE.Vector3(),
-	_rotateEnd = new THREE.Vector3(),
+	_rotateStart = new THREE.Vector3(0,0,0),
+	_rotateEnd = new THREE.Vector3(1,1,1),
 
 	_zoomStart = new THREE.Vector2(),
 	_zoomEnd = new THREE.Vector2(),
@@ -56,6 +56,10 @@ THREE.TrackballControls = function ( object, domElement ) {
 
 	_panStart = new THREE.Vector2(),
 	_panEnd = new THREE.Vector2();
+	
+	this.dump = function() {
+		console.log("internal vars", _eye, _rotateStart, _rotateEnd, _zoomStart, _zoomEnd, _panStart, _panEnd );
+	}
 
 	// for reset
 
@@ -148,7 +152,7 @@ THREE.TrackballControls = function ( object, domElement ) {
 
 			var angle = iangle * (_this.rotateSpeed) * (_this.dynamicZoomFactor);
 
-			//console.log("this.rotateCamera , factor,angle = ", '1/'+Math.round(1/_this.dynamicZoomFactor), angle*180/Math.PI+"'" )
+			//console.log("this.rotateCamera , factor,angle = ", '1/'+Math.round(1/_this.dynamicZoomFactor) )
 
 			quaternion.setFromAxisAngle( axis, -angle );
 
@@ -302,6 +306,43 @@ THREE.TrackballControls = function ( object, domElement ) {
 
 	};
 
+
+
+	this.set_position = function (p) {
+
+		_state = STATE.NONE;
+		_prevState = STATE.NONE;
+
+		_this.target.copy( _this.target0 );
+		_this.object.position.copy( p );
+		_this.object.up = new THREE.Vector3( -0.3144926099461334, -0.0004622430668460343, 0.9492598088092755 );
+
+		_eye.subVectors( _this.object.position, _this.target );
+
+		_rotateStart = new THREE.Vector3( 0.03494852446750744, -0.9751265581735071, -0.21887621200631652 )
+		_rotateEnd = _rotateStart.clone()
+		_zoomStart= new THREE.Vector2( 0.0, 1.2876992614648052e-14 )
+
+		_this.object.lookAt( _this.target );
+
+		_this.dispatchEvent( changeEvent );
+
+		lastPosition.copy( _this.object.position );
+
+		// _eye, _rotateStart, _rotateEnd, _zoomStart
+		// Object { x: 0.00005973706150438226, y: -0.5056971976321496, z: -0.00014888477636754478 }
+		 
+		// Object { x: 0.03494852446750744, y: -0.9751265581735071, z: -0.21887621200631652 }
+		  
+		// Object { x: 0.03494852446750744, y: -0.9751265581735071, z: -0.21887621200631652 }
+		   
+		// Object { x: 0, y: 1.2876992614648052e-14 }
+		    
+		    
+		_this.dynamicZoomFactor = _this.getAltitude() / 1.5;
+
+	};
+
 	// listeners
 
 	function keydown( event ) {
@@ -378,7 +419,7 @@ THREE.TrackballControls = function ( object, domElement ) {
 
 		if ( _this.enabled === false ) return;
 		event.preventDefault();
-//		event.stopPropagation();
+		//event.stopPropagation();
 
 		if ( _state === STATE.ROTATE && !_this.noRotate ) {
 
@@ -399,8 +440,8 @@ THREE.TrackballControls = function ( object, domElement ) {
 	function mouseup( event ) {
 		if ( _this.enabled === false ) return;
 
-//		event.preventDefault();
-//		event.stopPropagation();
+		//event.preventDefault();
+		//event.stopPropagation();
 
 		_state = STATE.NONE;
 
