@@ -1,8 +1,8 @@
-## WebGL Earth mapping experiment
+# WebGL Earth mapping experiment
 
 <a href="README.png"><img src="README.png" width="100%"></a>
 
-# EARTH WEB GL
+## EARTH WEB GL
 
 This is a simple Earth explorer, like google earth, but made specifically for tiling images squarly, any where,
 specifically, the south pole areas, where google does a poor job at mapping.
@@ -14,11 +14,14 @@ in your browser, then later who knows, maybe some online DB store.
 
 <a href="screen.jpg"><img src="screen.jpg" width="50%"></a>
 
-# CONTROLS
+## CONTROLS
 
 Keyboard arrows to move your tile lat/long values.
+
 < >  keys to rotate
+
 TAB  to change tiles
+
 PG Up/Down  to change scale factor.
 
 
