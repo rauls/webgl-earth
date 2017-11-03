@@ -12,7 +12,7 @@ This is also interactive, so you can edit/move/rotate etc.. the built in images.
 Theres a beta ADD button to add your own images/urls to it, and stored
 in your browser, then later who knows, maybe some online DB store.
 
-<a href="sample.jpg"><img src="sample.jpg" width="50%"></a>
+<a href="screen.jpg"><img src="screen.jpg" width="50%"></a>
 
 # CONTROLS
 
