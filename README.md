@@ -1,6 +1,8 @@
 # WebGL Earth mapping experiment
 
-<a href="README.png"><img src="README.png" width="100%"></a>
+<a href="http://users.on.net/~rsobon/earth/"><img src="README.png" width="100%"><BR>
+Live Web Demo Link
+</a>
 
 ## EARTH WEB GL
 
