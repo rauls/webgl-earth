@@ -29,7 +29,7 @@ THREE.TrackballControls = function ( object, domElement ) {
 	this.dynamicDampingFactor = 0.12;
 	this.dynamicZoomFactor    = 1.00;
 
-	this.minDistance = 0.5001;
+	this.minDistance = 0.5000;
 	this.maxDistance = 200;
 
 	this.keys = [ 65 /*A*/, 83 /*S*/, 68 /*D*/ ];
@@ -196,6 +196,11 @@ THREE.TrackballControls = function ( object, domElement ) {
 					var delta = ( _zoomEnd.y - _zoomStart.y );
 					_zoomStart.y += delta * this.dynamicDampingFactor;
 
+					if( typeof _this.zoom_callback == "function" ) {
+						console.log("zoom callback", _this._altitude )
+						_this.zoom_callback.apply( _this );
+					}
+
 					//console.log("this.zoomCamera , delta,factor,altitude = ", delta, '1/'+Math.round(1/_this.dynamicZoomFactor), _this.altitude )
 				}
 
@@ -337,10 +342,7 @@ THREE.TrackballControls = function ( object, domElement ) {
 		// Object { x: 0.03494852446750744, y: -0.9751265581735071, z: -0.21887621200631652 }
 		   
 		// Object { x: 0, y: 1.2876992614648052e-14 }
-		    
-		    
 		_this.dynamicZoomFactor = _this.getAltitude() / 1.5;
-
 	};
 
 	// listeners

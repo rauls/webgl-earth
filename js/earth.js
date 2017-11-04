@@ -39,6 +39,7 @@ function item2params(item,params) {
 var GuiParams = function() {
 	this.current_edit = window.current_edit;
 	this.rotate_speed = window.rotate_speed;
+	this.grid = false;
 	item2params( overlays[ current_edit ], this );
 	this.South_Pole = function() {
 		//
@@ -66,20 +67,23 @@ function init_datgui()
 	})
 	params.names_list = names_list;
 
-	gui.add(params, 'name').listen();
-	gui.add(params, 'names_list', names_list ).listen();
-
+	gui.add(params, 'altitude').listen();
+	gui.add(params, 'grid').onChange( function(v) {
+		window.app.grid.visible = v;
+	} ).listen();
 	gui.add(params, 'rotate_speed', 0, 10).onChange( function(v) {
 		window.rotate_speed = parseFloat(v);
 	} ).onFinishChange( function() { console.log("DONE") });
-	gui.add(params, 'current_edit', 0, overlays.length ).onChange( function(v) {
-		current_edit = parseInt(v);
-		item2params( overlays[ current_edit ], params );
-	} );
-	gui.add(params, 'longitude', 0, 360 ).step(0.0201).onChange( function(v) {
+
+	gui.add(params, 'names_list', names_list ).listen();
+
+	gui.add(params, 'name').listen();
+	gui.add(params, 'current_edit' ).listen();
+
+	gui.add(params, 'longitude', -360, 360 ).step(0.0201).onChange( function(v) {
 		overlays[ current_edit ].long = parseFloat(v);
 	} ).listen();
-	gui.add(params, 'latitude', 0, 360 ).step(0.0201).onChange( function(v) {
+	gui.add(params, 'latitude', -90, +90 ).step(0.0201).onChange( function(v) {
 		overlays[ current_edit ].lat = parseFloat(v);
 	} ).listen();
 	gui.add(params, 'rotation', 0, 360 ).step(1).onChange( function(v) {
@@ -139,7 +143,7 @@ function init_datgui()
 	}
 
 	var scene = new THREE.Scene();
-	var camera = window.camera = new THREE.PerspectiveCamera(45, width / height, 0.0001, 91*13);
+	this.camera = window.camera = new THREE.PerspectiveCamera(45, width / height, 0.0001, 91*13);
 	camera.position.z = 2 * radius;
 
 	var renderer = new THREE.WebGLRenderer();
@@ -165,8 +169,10 @@ function init_datgui()
 	clouds.material.opacity = 0.25;
 	earth.rotation.y = rotation;
 	earth.add(clouds)
-//	earth.add( create_grid(0x606060) )
-	scene.add(earth)
+	this.grid = create_grid(0x609060);
+	this.grid.visible = false;
+	earth.add( grid )
+	scene.add( earth )
 
 	window.stars = createStars(90*13, 64*2);
 	scene.add(window.stars);
@@ -244,35 +250,36 @@ function init_datgui()
 
 	var sp_images = '1280px-Pole-from-air.jpg 496657main_South_Pole_Station_DMS-orig_full.jpg pole-from-air.jpg South-Pole-26-Oct-2014.jpg'.split(' ');
 	// 496657main_South_Pole_Station_DMS = 1500x1095
+			//Object { image: "sp-icecore_01b.jpg", lat: -89.97182524091974, long: -289.4208061528802, opacity: 0.8, rotation: 62, scale: 6.666666666666667, altitude: 0, width: 1800, height: 1350, object: {…}, … }
 	window.overlays = [ {
 			image: 		"sp-icecore_01b.jpg",
-			lat:   		-89.979,
-			opacity:    1.0,
-			long:  		0.0,
-			rotation: 	0,
-			scale: 		15.0,
+			lat:   		-89.971825,
+			long:  		70.5791939999,
+			opacity:    0.8,
+			rotation: 	62,
+			scale: 		12000/1800,
 			altitude:   0,
 			width:  	1800,
 			height: 	1350
 		}, {
-		// Object { image: "pole-from-air.jpg", lat: -89.94928582639992, long: 268.54229354889435, rotation: 141, opacity: 0.7, scale: 1, altitude: 0, width: 2048, height: 1380, object: {…}, … }
+		//Object { image: "pole-from-air.jpg", lat: -89.9963741955718, long: 409.1078388792802, rotation: 268, opacity: 0.35000000000000003, scale: 0.4444, altitude: 0, width: 2048, height: 1380, object: {…}, … }
 			image: 		"pole-from-air.jpg",
-			lat:   		-89.94928582639992,
-			long:  		268.54229354889435,
-			rotation: 	141,
-			opacity:    0.7,
-			scale: 		1.0,
+			lat:   		-89.99637419,
+			long:  		49.1078388792802,
+			rotation: 	268,
+			opacity:    0.4,
+			scale: 		0.4444,
 			altitude:   0,
 			width:  	2048,
 			height: 	1380
 		}, {
-		//overlay :  Object { image: "abovedomes1.jpg", lat: -89.9504407471364, long: -30.92136242348144, rotation: 36, opacity: 0.2, scale: 0.9372155077695807, altitude: 0, width: 1369, height: 1073, object: {…}, … }
-			image: 		"abovedomes1.jpg",
-			lat:   		-89.9504407471364,
-			long:  		-30.92136242348144,
-			rotation: 	36,
-			opacity:    0.7,
-			scale: 		0.9372,
+		//Object { image: "abovedomes1.jpg", lat: -89.9736710092612, long: 40.339036258044125, rotation: 88, opacity: 0.55, scale: 0.3694116308271857, altitude: 0, width: 1369, height: 1073, object: {…}, … }
+		image: 		"abovedomes1.jpg",
+			lat:   		-89.97367100,
+			long:  		40.3390362580,
+			rotation: 	88,
+			opacity:    0.55,
+			scale: 		0.36941,
 			altitude:   0,
 			width:  	1369,
 			height: 	1073
@@ -284,6 +291,11 @@ function init_datgui()
 	window.addEventListener( 'keydown', key_handler, false );
 
 	this.gui_params = init_datgui();
+	this.controls.zoom_callback = function() {
+		app.gui_params.altitude = this.altitude * m_radius * 1000;
+	}
+
+
 
 	render();
 
@@ -328,13 +340,13 @@ function key_handler(event) {
     	if( window.current_edit == overlays.length ) {
     		window.current_edit = 0;
     	}
+    	overlay = window.overlays[ current_edit ];
     	app.gui_params.current_edit = current_edit;
     	update=true;
     }
     if( update ) {
     	item2params( overlay, app.gui_params );
     }
-    console.log("overlay : ", overlay )
 }
 
 
@@ -343,7 +355,7 @@ function key_handler(event) {
 
 function create_grid(color) {
 	color = typeof(color)=='undefined' ? 0x00ff00 : color;
-	var geometry = new THREE.SphereBufferGeometry( 0.502, 360/10, 360/10 );
+	var geometry = new THREE.SphereBufferGeometry( 0.50078, 360/5, 360/5 );
 	var material = new THREE.MeshBasicMaterial( {color: color, wireframe: true} );
 	var sphere = new THREE.Mesh( geometry, material );
 	return sphere;
@@ -372,7 +384,7 @@ function createBorder(width,height,scale) {
 }
 
 function createPlane(image_path,long,lat,rotation,width,height,opacity,scale) {
-	var w = width/(m_radius*1000.0);
+	var w = width/(m_radius*1000.0);			// scale DIM for 1 pixel of image = 1 meter
 	var h = height/(m_radius*1000.0);
     var m = new THREE.Mesh(
         new THREE.PlaneGeometry( w, h, 1 ),
@@ -384,7 +396,7 @@ function createPlane(image_path,long,lat,rotation,width,height,opacity,scale) {
         })
     );
 	m.scale.y =
-	m.scale.x = scale;
+	m.scale.x = scale;	// this should be total meters of image / pixels
     return m;
 }
 
@@ -455,7 +467,11 @@ function overlays_spin( a ) {
 	window.overlays.forEach( function(item,i) {
 		overlay_pos( item.overlay, 0, item.lat, item.rotation, item.scale, i );
 		overlay_pos( item.overlay.border, 0, item.lat, item.rotation, item.scale, i );
+		item.overlay.material.opacity = item.opacity;
 		item.overlay.border.visible = (i==current_edit);
+		if( (i==current_edit) ) {
+		    item2params( item, app.gui_params );
+		}
 
 	    overlay_rotate( item.object, item.long, 0 );
 	    item.overlay.rotation.z = deg(item.rotation);
