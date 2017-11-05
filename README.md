@@ -1,10 +1,10 @@
-# WebGL Earth mapping experiment
+# WebGL Earth & South Pole mapping experiment
 
 <a href="http://users.on.net/~rsobon/earth/"><img src="README.png" width="100%"><BR>
 Live Web Demo Link
 </a>
 
-## EARTH WEB GL
+## EARTH WEB GL (Antarctica)
 
 This is a simple Earth explorer, like google earth, but made specifically for tiling images squarly, any where,
 specifically, the south pole areas, where google does a poor job at mapping.

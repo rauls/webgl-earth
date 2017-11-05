@@ -267,7 +267,17 @@ function init_datgui()
 			altitude:   0,
 			width:  	1800,
 			height: 	1350
-		}, {	//Object { image: "pole-from-air.jpg", lat: -89.9963741955718, long: 409.1078388792802, rotation: 268, opacity: 0.35000000000000003, scale: 0.4444, altitude: 0, width: 2048, height: 1380, object: {…}, … }
+		}, {	// { image: "496657main_South_Pole_Station_DMS-orig_full.jpg", lat: -89.9851667045987, long: 7.32381807775355, opacity: 0.5, rotation: 153, scale: 3.07141735991201, altitude: 0, width: 1500, height: 1095, object: {…}, … }
+			image: 		"496657main_South_Pole_Station_DMS-orig_full.jpg",
+			lat:   		-89.985166704,
+			long:  		7.3238180777,
+			opacity:    0.5,
+			rotation: 	153,
+			scale: 		3.0714173,
+			altitude:   0,
+			width:  	1500,
+			height: 	1095
+		}, {	//Object { image: "pole-from-air.jpg", lat: -89.9963741955718, long: 409.1078388792802, rotation: 268, opacity: 0.35000000000000003, scale: 
 			image: 		"pole-from-air.jpg",
 			lat:   		-89.99637419,
 			long:  		49.1078388792802,
