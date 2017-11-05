@@ -48,10 +48,14 @@ var GuiParams = function() {
 	this.Add_Image_Tile = function() {
 		var newitem = Object.assign( {}, overlays[ current_edit ] );
 		newitem.image = this.new_url || "";
+		newitem.width = this.width;
+		newitem.height = this.height;
 		overlays.push( newitem );
 		planes.push( create_overlay( newitem,overlays.length ) );
 	};
 	this.new_url = "";
+	this.width = 1024;
+	this.height = 1024;
 	this.altitude = 10000;
 }
 
@@ -100,6 +104,8 @@ function init_datgui()
 	gui.add(params, 'Add_Image_Tile');
 	var f2 = gui.addFolder('    New Image Location');
 	f2.add( params, 'new_url' );
+	f2.add( params, 'width' );
+	f2.add( params, 'height' );
 
 	return params;
 }
@@ -261,8 +267,7 @@ function init_datgui()
 			altitude:   0,
 			width:  	1800,
 			height: 	1350
-		}, {
-		//Object { image: "pole-from-air.jpg", lat: -89.9963741955718, long: 409.1078388792802, rotation: 268, opacity: 0.35000000000000003, scale: 0.4444, altitude: 0, width: 2048, height: 1380, object: {…}, … }
+		}, {	//Object { image: "pole-from-air.jpg", lat: -89.9963741955718, long: 409.1078388792802, rotation: 268, opacity: 0.35000000000000003, scale: 0.4444, altitude: 0, width: 2048, height: 1380, object: {…}, … }
 			image: 		"pole-from-air.jpg",
 			lat:   		-89.99637419,
 			long:  		49.1078388792802,
@@ -272,9 +277,8 @@ function init_datgui()
 			altitude:   0,
 			width:  	2048,
 			height: 	1380
-		}, {
-		//Object { image: "abovedomes1.jpg", lat: -89.9736710092612, long: 40.339036258044125, rotation: 88, opacity: 0.55, scale: 0.3694116308271857, altitude: 0, width: 1369, height: 1073, object: {…}, … }
-		image: 		"abovedomes1.jpg",
+		}, {		//Object { image: "abovedomes1.jpg", lat: -89.9736710092612, long: 40.339036258044125, rotation: 88, opacity: 0.55, scale: 0.3694116308271857, altitude: 0, width: 1369, height: 1073, object: {…}, … }
+			image: 		"abovedomes1.jpg",
 			lat:   		-89.97367100,
 			long:  		40.3390362580,
 			rotation: 	88,
@@ -283,6 +287,17 @@ function init_datgui()
 			altitude:   0,
 			width:  	1369,
 			height: 	1073
+		},
+		{// Object { image: "orangeroof1.jpg", lat: -89.9979999907388, long: 54.01977711500789, rotation: -164, opacity: 0.8, scale: 0.10662550776958094, altitude: 0, width: 2048, height: 1365, object: {…}, … }
+			image: 		"orangeroof1.jpg",
+			lat:   		-89.99799999,
+			long:  		54.01977711,
+			rotation: 	-164,
+			opacity:    0.8,
+			scale: 		0.10662,
+			altitude:   0, 
+			width:  	2048,
+			height: 	1365
 		}
 	]
 
