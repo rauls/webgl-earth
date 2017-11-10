@@ -21,7 +21,7 @@ var m_radius    = 6371.0;
 
 var lat_adj = 0;
 var lat_off = 180;
-var plane_height = 5100;
+var plane_height = 20000; //5100;
 var current_edit = 1;
 var edit_speed = 1000;
 
@@ -178,6 +178,13 @@ function init_datgui()
 	this.grid = create_grid(0x609060);
 	this.grid.visible = false;
 	earth.add( grid )
+	this.antarctica = ContinentGeometry( 65, 65, Texture( "sp/Antarctica_4k.jpg" ) )
+	this.antarctica.rotation.x = deg(90)
+    this.antarctica.rotation.y = deg(0);
+    this.antarctica.rotation.z = deg(-90)
+    this.antarctica.update = UpdateSphere;
+
+	earth.add( antarctica )
 	scene.add( earth )
 
 	window.stars = createStars(90*13, 64*2);
@@ -208,7 +215,7 @@ function init_datgui()
 		var assets = window.app.assets;
 		var loader = new THREE.TextureLoader();
 		loader.setCrossOrigin("*");
-		if( name.match(/^images/) || name.match(/^http/i) || typeof(is_url) != 'undefined' )  {
+		if( name.match(/^(images|sp)/) || name.match(/^http/i) || typeof(is_url) != 'undefined' )  {
 			return loader.load( name );
 		} else {
 			var src = assets.current.base + assets[ name ];
@@ -221,7 +228,7 @@ function init_datgui()
 			new THREE.SphereGeometry(radius, segments, segments),
 			new THREE.MeshPhongMaterial({
 				map:         Texture('earth'),
-				bumpMap:     Texture('elev'),
+				//bumpMap:     Texture('elev'),
 				bumpScale:   0.001,
 				transparent: true,
 				opacity:     1.0,
@@ -232,7 +239,7 @@ function init_datgui()
 	}
 
 	function createClouds(radius, segments) {
-		var ch = 10/(m_radius*2);
+		var ch = 30/(m_radius*2);
 		return new THREE.Mesh(
 			new THREE.SphereGeometry(radius + ch, segments, segments),			
 			new THREE.MeshPhongMaterial({
@@ -254,7 +261,34 @@ function init_datgui()
 		);
 	}
 
-	var sp_images = '1280px-Pole-from-air.jpg 496657main_South_Pole_Station_DMS-orig_full.jpg pole-from-air.jpg South-Pole-26-Oct-2014.jpg'.split(' ');
+
+	function ContinentGeometry( pos, len, texture ) {
+		var Start = (pos)*Math.PI/180,  Length = (90-len)*2*Math.PI/180;
+		return ( new THREE.Mesh(
+			new THREE.SphereGeometry(
+				0.503, 32,32, Start, Length, Start, Length
+			),
+			new THREE.MeshPhongMaterial( {
+				map: texture,
+				color: 0xFFFFFF,
+				side: THREE.DoubleSide,
+				specular:    0xCDCDCD
+				//flatShading: true
+			} )
+
+		) );
+	}
+	
+	function UpdateSphere( pos, len ) {
+	    var Start = (pos)*Math.PI/180,  Length = (90-len)*2*Math.PI/180;
+        this.geometry.dispose();
+        this.geometry =
+        new THREE.SphereGeometry(
+           0.503, 32,32, Start, Length, Start, Length
+        );
+	}
+
+
 	// 496657main_South_Pole_Station_DMS = 1500x1095
 			//Object { image: "sp-icecore_01b.jpg", lat: -89.97182524091974, long: -289.4208061528802, opacity: 0.8, rotation: 62, scale: 6.666666666666667, altitude: 0, width: 1800, height: 1350, object: {…}, … }
 	window.overlays = [ {
@@ -381,7 +415,7 @@ function key_handler(event) {
 function create_grid(color) {
 	color = typeof(color)=='undefined' ? 0x00ff00 : color;
 	var geometry = new THREE.SphereBufferGeometry( 0.50078, 360/5, 360/5 );
-	var material = new THREE.MeshBasicMaterial( {color: color, wireframe: true} );
+	var material = new THREE.MeshBasicMaterial( {color: color, wireframe: true, transparent: true, opacity: 0.50 } );
 	var sphere = new THREE.Mesh( geometry, material );
 	return sphere;
 }
