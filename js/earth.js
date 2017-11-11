@@ -42,8 +42,7 @@ var GuiParams = function() {
 	this.grid = false;
 	item2params( overlays[ current_edit ], this );
 	this.South_Pole = function() {
-		//
-		app.controls.set_position( new THREE.Vector3( -0.0007532996302339945,-0.5029778573090454,-0.00047011971273784 ) );
+		app.controls.set_position( new THREE.Vector3( -0.0007532996302339945,-0.5047897776433968,-0.00047011971273784 ) );
 	};
 	this.Add_Image_Tile = function() {
 		var newitem = Object.assign( {}, overlays[ current_edit ] );
@@ -159,13 +158,13 @@ function init_datgui()
 
 	this.Texture = Texture;
 	this.light = new THREE.DirectionalLight(0xfffef9, .6);
-	light.position.set(5,-13,135);
+	light.position.set(5,-13,13);
 	scene.add(light);
 	
 	this.light_pos = 0;
 	light.timer = setInterval( function() {
 	    light_pos += 0.1;
-	    light.position.set( Math.sin( deg(light_pos) ) * 100, 2,  Math.cos( deg(light_pos) ) * 100 );
+	    light.position.set( Math.sin( deg(light_pos) ) * 20, -10,  Math.cos( deg(light_pos) ) * 30 );
 	}, 1000 );
 
 	var earth = window.earth = new THREE.Object3D();
@@ -239,7 +238,7 @@ function init_datgui()
 	}
 
 	function createClouds(radius, segments) {
-		var ch = 30/(m_radius*2);
+		var ch = 44/(m_radius*2);
 		return new THREE.Mesh(
 			new THREE.SphereGeometry(radius + ch, segments, segments),			
 			new THREE.MeshPhongMaterial({
@@ -414,8 +413,8 @@ function key_handler(event) {
 
 function create_grid(color) {
 	color = typeof(color)=='undefined' ? 0x00ff00 : color;
-	var geometry = new THREE.SphereBufferGeometry( 0.50078, 360/5, 360/5 );
-	var material = new THREE.MeshBasicMaterial( {color: color, wireframe: true, transparent: true, opacity: 0.50 } );
+	var geometry = new THREE.SphereBufferGeometry( 0.50500, 360/5, 360/5 );
+	var material = new THREE.MeshBasicMaterial( {color: color, wireframe: true, transparent: true, opacity: 0.10 } );
 	var sphere = new THREE.Mesh( geometry, material );
 	return sphere;
 }
