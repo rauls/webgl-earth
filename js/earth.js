@@ -21,7 +21,7 @@ var m_radius    = 6371.0;
 
 var lat_adj = 0;
 var lat_off = 180;
-var plane_height = 20000; //5100;
+var plane_height = 22000; //5100;
 var current_edit = 1;
 var edit_speed = 1000;
 
@@ -171,7 +171,7 @@ function init_datgui()
     var sphere = createSphere(radius, segments);
 	earth.add(sphere)
     var clouds = window.clouds = createClouds(radius, segments);
-	clouds.material.opacity = 0.25;
+	clouds.material.opacity = 0.40;
 	earth.rotation.y = rotation;
 	earth.add(clouds)
 	this.grid = create_grid(0x609060);
@@ -265,7 +265,7 @@ function init_datgui()
 		var Start = (pos)*Math.PI/180,  Length = (90-len)*2*Math.PI/180;
 		return ( new THREE.Mesh(
 			new THREE.SphereGeometry(
-				0.503, 32,32, Start, Length, Start, Length
+				0.503, 36,36, Start, Length, Start, Length
 			),
 			new THREE.MeshPhongMaterial( {
 				map: texture,
@@ -283,7 +283,7 @@ function init_datgui()
         this.geometry.dispose();
         this.geometry =
         new THREE.SphereGeometry(
-           0.503, 32,32, Start, Length, Start, Length
+           0.503, 36,36, Start, Length, Start, Length
         );
 	}
 
@@ -409,13 +409,11 @@ function key_handler(event) {
 
 
 
-
-
 function create_grid(color) {
 	color = typeof(color)=='undefined' ? 0x00ff00 : color;
 	var geometry = new THREE.SphereBufferGeometry( 0.50500, 360/5, 360/5 );
-	var material = new THREE.MeshBasicMaterial( {color: color, wireframe: true, transparent: true, opacity: 0.10 } );
-	var sphere = new THREE.Mesh( geometry, material );
+	var material = new THREE.LineBasicMaterial( {color: color, wireframe: true, transparent: true, opacity: 0.10 } );
+	var sphere = new THREE.LineSegments( geometry, material );
 	return sphere;
 }
 // 1deg = 111.11 km.
