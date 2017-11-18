@@ -138,6 +138,7 @@ function init_datgui()
 	} else {
 		assets.current = assets.online;
 		assets.current = assets.local;
+		assets.earth.replace('.png','.jpg');
 	}
 
 	var webglEl = document.getElementById('webgl');
