@@ -22,10 +22,13 @@ var m_radius    = 6371.0;
 var lat_adj = 0;
 var lat_off = 180;
 var plane_height = 22000; //5100;
-var current_edit = 1;
+var current_edit = 0;
 var edit_speed = 1000;
 
+var antarctica_pos = 89.9;			// lat offset
+var antarctica_len = 50.59;			// zoom level
 
+var textureLoader = new THREE.TextureLoader();;
 
 function item2params(item,params) {
 	params.longitude = item.long;
@@ -109,7 +112,7 @@ function init_datgui()
 	return params;
 }
 
-
+App =
 (function () {
 	window.app = this;
 	this.assets = {
@@ -149,6 +152,7 @@ function init_datgui()
 	}
 
 	var scene = new THREE.Scene();
+	this.scene = scene;
 	this.camera = window.camera = new THREE.PerspectiveCamera(45, width / height, 0.0001, 91*13);
 	camera.position.z = 2 * radius;
 
@@ -172,13 +176,16 @@ function init_datgui()
     var sphere = createSphere(radius, segments);
 	earth.add(sphere)
     var clouds = window.clouds = createClouds(radius, segments);
-	clouds.material.opacity = 0.40;
+	clouds.material.opacity = 0.50;
+	clouds.visible = false;
 	earth.rotation.y = rotation;
 	earth.add(clouds)
+
 	this.grid = create_grid(0x609060);
 	this.grid.visible = false;
 	earth.add( grid )
-	this.antarctica = ContinentGeometry( 65, 65, Texture( "sp/Antarctica_4k.jpg" ) )
+	this.antarctica = ContinentGeometry( 90, 52, Texture( "sp/Antarctica_4k.png" ) )
+	// created at the equator, now reposition it 90deg south, and rotate -90 on surface
 	this.antarctica.rotation.x = deg(90)
     this.antarctica.rotation.y = deg(0);
     this.antarctica.rotation.z = deg(-90)
@@ -189,6 +196,7 @@ function init_datgui()
 
 	window.stars = createStars(90*13, 64*2);
 	scene.add(window.stars);
+
 
 	//var controls = new THREE.OrbitControls(camera);
 	this.controls = new THREE.TrackballControls(camera);
@@ -229,7 +237,7 @@ function init_datgui()
 			new THREE.MeshPhongMaterial({
 				map:         Texture('earth'),
 				//bumpMap:     Texture('elev'),
-				bumpScale:   0.001,
+				bumpScale:   0.0003,
 				transparent: true,
 				opacity:     1.0,
 				specularMap: Texture('water'),
@@ -263,15 +271,17 @@ function init_datgui()
 
 
 	function ContinentGeometry( pos, len, texture ) {
-		var Start = (pos)*Math.PI/180,  Length = (90-len)*2*Math.PI/180;
+		var Start = deg(pos-(len/2)),  Length = (len)*Math.PI/180;
 		return ( new THREE.Mesh(
 			new THREE.SphereGeometry(
-				0.503, 36,36, Start, Length, Start, Length
+				radius+0.0001, segments,segments, Start, Length, Start, Length
 			),
 			new THREE.MeshPhongMaterial( {
-				map: texture,
-				color: 0xFFFFFF,
-				side: THREE.DoubleSide,
+				map: 		 texture,
+				color: 		 0xFFFFFF,
+				side: 		 THREE.DoubleSide,
+				transparent: true,
+				opacity: 	 1.00,
 				specular:    0xCDCDCD
 				//flatShading: true
 			} )
@@ -279,12 +289,12 @@ function init_datgui()
 		) );
 	}
 	
-	function UpdateSphere( pos, len ) {
-	    var Start = (pos)*Math.PI/180,  Length = (90-len)*2*Math.PI/180;
+	function UpdateSphere( pos=90, len=52 ) {
+	    var Start = deg(pos-(len/2)),  Length = (len)*Math.PI/180;
         this.geometry.dispose();
         this.geometry =
         new THREE.SphereGeometry(
-           0.503, 36,36, Start, Length, Start, Length
+           radius+0.0001, segments,segments, Start, Length, Start, Length
         );
 	}
 
@@ -345,7 +355,7 @@ function init_datgui()
 		}
 	]
 
-	window.planes = create_overlays(scene,overlays);
+	window.planes = create_overlays(scene,overlays,antarctica);
 
 	window.addEventListener( 'keydown', key_handler, false );
 
@@ -381,18 +391,47 @@ subtract 	109
 decimal point 	110
 divide 	111 
 */
+var bookmarks = {
+	antarctica: {
+			eye: 	  {x: -0.05969718844791062, y: -0.7101112444150364, z: -0.05715790655759058},
+			position: {x: -0.05969718844791062, y: -0.7101112444150364, z: -0.05715790655759058},
+			target:   {x: 0, y: 0, z: 0}
+	}
+}
+
+function reset_camera() {
+	controls.setState( window.saved );
+}
+
+window.saved_points = [];
+
+function save_camera() {
+	window.saved = controls.saveState();
+	window.saved_points.push( saved );
+}
+
 function key_handler(event) {
     var overlay = window.overlays[ window.current_edit ];
     var spd = window.edit_speed;
     var update = false;
-    if( event.keyCode == 37 ) {     overlay.long -= spd/(m_radius*1); update=true;    }
-    if( event.keyCode == 38 ) {     overlay.lat  += spd/(m_radius*1000); update=true;    }
-    if( event.keyCode == 39 ) {     overlay.long += spd/(m_radius*1); update=true;    }
-    if( event.keyCode == 40 ) {     overlay.lat  -= spd/(m_radius*1000); update=true;    }
-    if( event.keyCode == 33 ) {     overlay.scale  += spd/(m_radius*10); update=true;    }
-    if( event.keyCode == 34 ) {     overlay.scale  -= spd/(m_radius*10); update=true;    }
-    if( event.key == ',' ) {        overlay.rotation-=1; update=true;    }
-    if( event.key == '.' ) {        overlay.rotation+=1; update=true;    }
+    if( event.ctrlKey ) {
+	    if( event.keyCode == 37 ) {     antarctica_pos -= 0.1; antarctica.update( antarctica_pos, antarctica_len ) }
+	    if( event.keyCode == 38 ) {     antarctica_len += 0.1; antarctica.update( antarctica_pos, antarctica_len ) ;    }
+	    if( event.keyCode == 39 ) {     antarctica_pos += 0.1; antarctica.update( antarctica_pos, antarctica_len ) ;    }
+	    if( event.keyCode == 40 ) {     antarctica_len -= 0.1; antarctica.update( antarctica_pos, antarctica_len ) ;    }
+		
+    } else {
+	    if( event.keyCode == 37 ) {     overlay.long -= spd/(m_radius*1); update=true;    }
+	    if( event.keyCode == 38 ) {     overlay.lat  += spd/(m_radius*1000); update=true;    }
+	    if( event.keyCode == 39 ) {     overlay.long += spd/(m_radius*1); update=true;    }
+	    if( event.keyCode == 40 ) {     overlay.lat  -= spd/(m_radius*1000); update=true;    }
+	    if( event.keyCode == 33 ) {     overlay.scale  += spd/(m_radius*10); update=true;    }
+	    if( event.keyCode == 34 ) {     overlay.scale  -= spd/(m_radius*10); update=true;    }
+	    if( event.key == ',' ) {        overlay.rotation-=1; update=true;    }
+	    if( event.key == '.' ) {        overlay.rotation+=1; update=true;    }
+	    if( event.key == 's' ) {        save_camera();    }
+	    if( event.key == 'r' ) {        reset_camera();    }
+	}
 
     if( event.keyCode == 9 ) {
     	window.current_edit++;
@@ -440,6 +479,25 @@ function createBorder(width,height,scale) {
 	return line;
 }
 
+
+function create_line(p,len,rot) {
+	var geometry = new THREE.Geometry()	
+	geometry.vertices.push( new THREE.Vector3(0, len, 0) );
+	geometry.vertices.push( new THREE.Vector3(0, 0, 0) );
+	var material = new THREE.LineBasicMaterial( { color: 0x00ff00, linewidth: 30 } );
+	var line = new THREE.Line(geometry, material);
+	line.position.copy(p)
+	line.rotation.copy(rot)
+	return line;
+}
+
+function create_helper(p) {
+	var h = 1000/(m_radius*1000.0);
+	var o = new THREE.Mesh( new THREE.BoxBufferGeometry( h/10, h/10, h/10 ), new THREE.MeshNormalMaterial() );
+	o.position.copy(p)
+	return o
+}
+
 function createPlane(image_path,long,lat,rotation,width,height,opacity,scale) {
 	var w = width/(m_radius*1000.0);			// scale DIM for 1 pixel of image = 1 meter
 	var h = height/(m_radius*1000.0);
@@ -457,13 +515,13 @@ function createPlane(image_path,long,lat,rotation,width,height,opacity,scale) {
     return m;
 }
 
-function create_overlay( item,i ) {
+function create_overlay_old( item,i ) {
 	var overlay = createPlane('sp/'+item.image, item.long, item.lat, item.rotation, item.width, item.height, item.opacity, item.scale )
 	overlay.name = 'Image-'+item.image;
-	overlay_pos( overlay, 0, item.lat, item.rotation, item.scale, i );
+	overlay_pos( overlay, item.long, item.lat, item.rotation, item.scale, i );
 	overlay.border = createBorder( item.width, item.height, item.scale );
 	overlay.border.visible = (i==current_edit);
-	overlay_pos( overlay.border, 0, item.lat, item.rotation, item.scale, i );
+	overlay_pos( overlay.border, item.long, item.lat, item.rotation, item.scale, i );
 
 	console.log("overlay pos ", overlay.position,overlay.rotation )
 
@@ -472,19 +530,144 @@ function create_overlay( item,i ) {
 	plane.add( overlay );
 	plane.add( overlay.border );
 	//plane.position = new THREE.Vector3( 0,0,0 );
-	overlay_rotate( plane, item.long, 0, item.rotation )
-
+	//overlay_rotate( plane, item.long*0, item.lat, item.rotation )
 	item.object = plane;
 	item.overlay = overlay;
 	earth.add( plane );
 	return plane;
 }
 
-function create_overlays( scene, items ) {
+
+var decals = [];
+
+function getDirectionFrom( from, to ) {
+	// Normalize vectors to make sure they have a length of 1
+	var v1 = from.clone();
+	var v2 = to.clone();
+	v1.normalize();
+	v2.normalize();
+
+	// Create a quaternion, and apply starting, then ending vectors
+	var quaternion = new THREE.Quaternion();
+	quaternion.setFromUnitVectors(v1, v2);
+
+	// Quaternion now has rotation data within it. 
+	// We'll need to get it out with a THREE.Euler()
+	var euler = new THREE.Euler();
+	euler.setFromQuaternion(quaternion);
+	return euler;
+}
+
+function createDecalPlane(image_path,mesh,position,rotation,width,height,opacity,scale) {
+	var w = width/(m_radius*1000.0);			// scale DIM for 1 pixel of image = 1 meter
+	var h = height/(m_radius*1000.0);
+	var size = new THREE.Vector3( w*1000,h*1000,1 );
+	var geometry = new THREE.DecalGeometry( mesh, position, rotation, size );
+	var material = new THREE.MeshPhongMaterial({
+            map:   Texture(image_path,true),
+			side:  THREE.DoubleSide,
+			normalScale: new THREE.Vector2( 1, 1 ),
+            transparent: opacity ? true : false,
+            opacity: opacity || 1.0,
+			transparent: true,
+			shininess: 30,
+			depthTest: true,
+			depthWrite: false,
+			polygonOffset: true,
+			polygonOffsetFactor: - 4,
+			wireframe: false
+    })
+
+    var m = new THREE.Mesh( geometry, material );
+	m.scale.y =
+	m.scale.x = scale;	// this should be total meters of image / pixels
+    return m;
+}
+
+var raycaster = new THREE.Raycaster();
+
+function create_overlay( item, i, sphere ) {
+	return create_overlay_old( item, i )
+	var rotation;
+	var alt = 1620+(i+1);
+	var position = coordinate2_pos( item.long, item.lat, alt )
+	var position2 = coordinate2_pos( item.long, item.lat, 1 )
+	rotation = getDirectionFrom( position, position2 )
+
+	var overlay = createDecalPlane('sp/'+item.image, antarctica, position, rotation, item.width, item.height, item.opacity, item.scale )
+	overlay.name = 'Image-'+item.image;
+
+	overlay.border = createBorder( item.width, item.height, item.scale );
+	overlay.border.visible = (i==current_edit);
+	overlay_pos( overlay.border, item.long, item.lat, item.rotation, item.scale, alt );
+
+	var plane = new THREE.Object3D();
+	plane.name = 'Overlay-'+item.image;
+	plane.add( overlay );
+	plane.add( overlay.border );
+
+	item.mouseHelper = create_helper(position)
+	item.mouseHelper.rotation.copy( overlay.border.rotation )
+	plane.add( item.mouseHelper  );	
+
+	item.arrow = create_line(position, 1000/(m_radius*1000), rotation)
+	plane.add( item.arrow  );	
+
+	item.position = position;
+	item.object = plane;
+	item.overlay = overlay;
+	earth.add( plane );
+	return plane;
+}
+
+
+var intersects = [];
+
+function checkIntersection(x,y) {
+
+	if ( ! mesh ) return;
+
+	var mouse = new THREE.Vector2( x,y );
+
+	raycaster.setFromCamera( mouse, camera );
+	raycaster.intersectObject( mesh, false, intersects );
+
+	if ( intersects.length > 0 ) {
+
+		var p = intersects[ 0 ].point;
+		mouseHelper.position.copy( p );
+		intersection.point.copy( p );
+
+		var n = intersects[ 0 ].face.normal.clone();
+		n.transformDirection( mesh.matrixWorld );
+		n.multiplyScalar( 10 );
+		n.add( intersects[ 0 ].point );
+
+		intersection.normal.copy( intersects[ 0 ].face.normal );
+		mouseHelper.lookAt( n );
+
+		var positions = line.geometry.attributes.position;
+		positions.setXYZ( 0, p.x, p.y, p.z );
+		positions.setXYZ( 1, n.x, n.y, n.z );
+		positions.needsUpdate = true;
+
+		intersection.intersects = true;
+
+		intersects.length = 0;
+
+	} else {
+
+		intersection.intersects = false;
+
+	}
+
+}
+
+function create_overlays( scene, items, sphere ) {
 	var planes = [];
 	var item = items[0];
 	items.forEach( function(item,i) {
-		planes.push( create_overlay( item,i ) );
+		planes.push( create_overlay( item,i, sphere ) );
 	})
 
 	return planes;
@@ -493,15 +676,45 @@ function create_overlays( scene, items ) {
 
 function deg(n) { return n * Math.PI / 180.0; }
 
+
+function lonLatToVector3( lng, lat, height, out )
+{
+    out = out || new THREE.Vector3();
+    height = height || 0;
+    var h = 0.5 + (height/(m_radius*1000.0));
+    //flips the Y axis
+    lat = Math.PI / 2 - lat;
+    //distribute to sphere
+    out.set(    h * Math.sin( lat ) * Math.sin( lng ),
+                h * Math.cos( lat ),
+                h * Math.sin( lat ) * Math.cos( lng )
+    );
+    return out;
+}
+
+function coordinate2_pos( long, lat, altitude )
+{
+	plane_height = 10;
+    var newpos = lonLatToVector3( deg(long), deg(lat), (typeof(altitude) == 'number') ? plane_height+(altitude*1) : plane_height );
+    //newpos.y -= 0.0001;
+    return newpos;
+}
+
+function coordinate2_rotation( long, lat, rot )
+{
+	var rotation = new THREE.Euler();
+    rotation.set( deg(lat_off-lat)-(lat*lat_adj), deg(180), deg(rot) );
+    return rotation;
+}
+
+
 function overlay_pos( m, long, lat, rot, scale, altitude )
 {
     if( m ) {
-        var newpos = lonLatToVector3( deg(long), deg(lat), (typeof(altitude) == 'number') ? plane_height+(altitude*5) : plane_height );
+        var newpos = coordinate2_pos( long, lat, altitude );
         // lat/long = planes tilt along its position.
         m.position.copy( newpos );
-        m.rotation.x = deg(lat_off-lat)-(lat*lat_adj);
-        m.rotation.y = deg(180);
-        m.rotation.z = deg(rot);
+        m.rotation.copy( coordinate2_rotation( long,lat, rot ) )
 		m.scale.y =
 		m.scale.x = scale;
         return m;
@@ -521,35 +734,23 @@ function overlay_rotate( m, long, lat )
 
 function overlays_spin( a ) {
     var item = window.overlays[0];
+    var last;
 	window.overlays.forEach( function(item,i) {
-		overlay_pos( item.overlay, 0, item.lat, item.rotation, item.scale, i );
-		overlay_pos( item.overlay.border, 0, item.lat, item.rotation, item.scale, i );
+		var offset = (5*i)+630;
+		overlay_pos( item.overlay,        0, item.lat, item.rotation, item.scale, item.altitude+offset );
+		overlay_pos( item.overlay.border, 0, item.lat, item.rotation, item.scale, item.altitude+offset );
 		item.overlay.material.opacity = item.opacity;
 		item.overlay.border.visible = (i==current_edit);
 		if( (i==current_edit) ) {
 		    item2params( item, app.gui_params );
 		}
 
-	    overlay_rotate( item.object, item.long, 0 );
-	    item.overlay.rotation.z = deg(item.rotation);
+	    //overlay_rotate( item.object, item.long, 0 );
+	    //item.overlay.rotation.z = deg(item.rotation);
+	    last = item;
 	})
 }
 
 
 
-
-function lonLatToVector3( lng, lat, height, out )
-{
-    out = out || new THREE.Vector3();
-    height = height || 0;
-    var h = 0.5 + (height/(m_radius*1000.0));
-    //flips the Y axis
-    lat = Math.PI / 2 - lat;
-    //distribute to sphere
-    out.set(    h * Math.sin( lat ) * Math.sin( lng ),
-                h * Math.cos( lat ),
-                h * Math.sin( lat ) * Math.cos( lng )
-    );
-    return out;
-}
 

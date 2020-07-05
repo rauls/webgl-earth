@@ -51,7 +51,7 @@ THREE.OrbitControls = function ( object, domElement ) {
 	// This option actually enables dollying in and out; left as "zoom" for backwards compatibility.
 	// Set to false to disable zooming
 	this.enableZoom = true;
-	this.zoomSpeed = 1.0;
+	this.zoomSpeed = 5.0;
 
 	// Set to false to disable rotating
 	this.enableRotate = true;
@@ -103,12 +103,26 @@ THREE.OrbitControls = function ( object, domElement ) {
 	};
 
 	this.saveState = function () {
-
 		scope.target0.copy( scope.target );
 		scope.position0.copy( scope.object.position );
 		scope.zoom0 = scope.object.zoom;
+		return {
+			target: scope.target0.clone(),
+			position: scope.position0.clone(),
+			zoom: scope.zoom0.clone()
+		}
+	};
+
+	this.setState = function ( params ) {
+
+		scope.target0.copy( params.target );
+		scope.position0.copy( params.position );
+		scope.zoom0 = params.zoom;
+
+		this.reset();
 
 	};
+
 
 	this.reset = function () {
 
