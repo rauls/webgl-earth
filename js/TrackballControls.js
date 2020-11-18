@@ -23,7 +23,7 @@ THREE.TrackballControls = function ( object, domElement ) {
 
 	this.noRotate = false;
 	this.noZoom = false;
-	this.noPan = false;
+	this.noPan = true;
 
 	this.staticMoving = false;
 	this.dynamicDampingFactor = 0.12;
@@ -58,7 +58,7 @@ THREE.TrackballControls = function ( object, domElement ) {
 	_panEnd = new THREE.Vector2();
 	
 	this.dump = function() {
-		console.log("internal vars", _eye, _rotateStart, _rotateEnd, _zoomStart, _zoomEnd, _panStart, _panEnd );
+		console.log("internal vars", {_eye, _rotateStart, _rotateEnd, _zoomStart, _zoomEnd, _panStart, _panEnd} );
 	}
 
 	// for reset
@@ -70,6 +70,19 @@ THREE.TrackballControls = function ( object, domElement ) {
 	// events
 
 	var changeEvent = { type: 'change' };
+
+
+	this.changeRotate = function(s,e) {
+		_rotateStart = _this.getMouseProjectionOnBall( s.x, s.y );
+		_rotateEnd = _this.getMouseProjectionOnBall( e.x, e.y );
+		console.log("new _rotateEnd", _rotateEnd)
+		this.update();
+	}
+
+	this.changeZoom = function(s,e) {
+		_zoomStart = s.clone();
+		_zoomEnd = e.clone();
+	}
 
 
 	this.saveState = function () {
@@ -88,6 +101,7 @@ THREE.TrackballControls = function ( object, domElement ) {
 		_this.object.position.copy( params.eye );
 		this.reset();
 	};
+
 
 
 	// methods
@@ -443,6 +457,7 @@ THREE.TrackballControls = function ( object, domElement ) {
 		if ( _state === STATE.ROTATE && !_this.noRotate ) {
 
 			_rotateEnd = _this.getMouseProjectionOnBall( event.clientX, event.clientY );
+			console.log("_rotateEnd", event.clientX, event.clientY , _rotateEnd)
 
 		} else if ( _state === STATE.ZOOM && !_this.noZoom ) {
 

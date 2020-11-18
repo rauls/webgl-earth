@@ -128,6 +128,15 @@ App =
 		clouds: 'fair_clouds_4k.png',
 		current: this.local
 	};
+
+	this.camera_seq = [
+		{ ms: 1500, cmd: 'rotate', 			 data: { x: 30, y: 300, }, count: 0, repeat: 95 } ,
+		{ ms: 4500, cmd: 'handleMouseWheel', data: { y: -5/300 }, count: 0, repeat: 40 },
+		{ ms: 11600,cmd: 'rotate', 			 data: { y: 0 } },
+		{ ms: 12000,cmd: 'handleMouseWheel', data: { y: -5/200 }, count: 0, repeat: 40 }
+	];
+
+
 	var width  = window.innerWidth,
 		height = window.innerHeight;
 
@@ -205,6 +214,44 @@ App =
 	
 	window.angle = 0;
 	window.rotate_speed = 0.10;
+
+	process_timers();
+
+	function process_timers( ) {
+		var state0 = this.controls.saveState();
+
+		for( var i=0; i<this.camera_seq.length; i++ ) {
+			setTimeout( function(item) {
+				console.log("Setup : ", item.repeat, item )
+				if( item.repeat ) {
+					item.handle = setInterval( function(item) {
+						if( item.cmd == 'handleMouseWheel' ) {
+							var a = new THREE.Vector2(0,0);
+							var b = new THREE.Vector2(0,item.data.y);
+							this.controls.changeZoom( a, b );
+						} else
+						if( item.cmd == 'rotate' ) {
+							var a = new THREE.Vector2(800,item.data.y);
+							var b = new THREE.Vector2(800+item.data.x,item.data.y-(item.count*2));
+							this.controls.changeRotate( a, b );
+						}
+
+						item.count++;
+						if( item.count > item.repeat ) {
+							clearInterval( item.handle )
+						}
+					}.bind(this), 1000/30, item  )
+				} else
+				if( item.cmd == 'rotate' ) {
+					var a = new THREE.Vector2(0,0);
+					var b = new THREE.Vector2(0,item.data.y);
+					this.controls.changeRotate( a, b );
+				}
+			}.bind(this), this.camera_seq[i].ms, this.camera_seq[i] )
+		}
+	}
+
+	this.process_timers = process_timers;
 
 	function render() {
 		this.controls.update();
